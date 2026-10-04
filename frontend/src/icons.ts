@@ -15,6 +15,7 @@ const ICONS: Record<DeviceKind, string> = {
   camera: "M4 7h11v10H4zM15 10.5l5-3v9l-5-3",
   scene: "M5 19l9-9M14 4l.8 2.2L17 7l-2.2.8L14 10l-.8-2.2L11 7l2.2-.8zM19 11l.5 1.5L21 13l-1.5.5L19 15l-.5-1.5L17 13l1.5-.5z",
   script: "M8 4h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2h9M8 4a2 2 0 0 0-2 2v10M9 9h6M9 12h4",
+  vacuum: "M7 18h10M6 14h12v4H6zM9 18v2M15 18v2M12 4a8 8 0 0 1 6 13H6a8 8 0 0 1 6-13zM12 8v4M14.5 10h.01",
 };
 
 export function iconPath(kind: DeviceKind): string {

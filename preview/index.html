@@ -101,7 +101,22 @@
               if (domain === "light" && on && a.brightness === undefined) a.brightness = 200;
               if (domain === "light" && !on) delete a.brightness;
             };
-            if (service === "toggle") setOn(st.state !== "on");
+            if (service === "toggle") {
+              if (domain === "vacuum") {
+                // robot: start cleaning from the dock / stop and park in front of it
+                next.state = st.state === "cleaning" ? "idle" : "cleaning";
+                a.status = next.state === "cleaning" ? "Cleaning" : "Idle";
+              } else setOn(st.state !== "on");
+            } else if (service === "clean_start" && domain === "vacuum") {
+              next.state = "cleaning";
+              a.status = "Cleaning";
+            } else if (service === "return_to_base" && domain === "vacuum") {
+              next.state = "returning";
+              a.status = "Returning to dock";
+            } else if (service === "stop" && domain === "vacuum") {
+              next.state = "idle";
+              a.status = "Idle";
+            }
             else if (service === "turn_off") setOn(false);
             else if (service === "turn_on" && domain === "light") {
               setOn(true);

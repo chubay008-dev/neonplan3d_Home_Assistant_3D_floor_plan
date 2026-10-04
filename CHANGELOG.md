@@ -4,6 +4,16 @@ All notable changes to NeonPlan 3D. The full notes in German and English are on 
 [releases page](https://github.com/Mastershort/neonplan3d/releases). Ideas and votes:
 [Discussions → Ideas](https://github.com/Mastershort/neonplan3d/discussions/categories/ideas).
 
+## 1.9.0
+
+### New
+
+- **Dimension chains** in the plan view: per room, a double-arrow width chain above the top edge and a depth chain to the left, in metres, with extension ticks. Toggle with the ruler button.
+- **Point-to-point distance** tool: click two points, get the distance in metres.
+- **DXF export**: the building is exported as a DXF R2010 drawing (1 unit = 1 m) with wall layers, rooms, openings (door swing + window ticks), room labels (name, area, W x D) and bounding-box dimension chains.
+- **Robot vacuums** in the demo apartment: two robots that clean their rooms, clickable with a quick menu (power toggle, return to dock, stop).
+- **Apartment demo layout**: 3-bedroom apartment (master with private WC + balcony, two further bedrooms, living + office, kitchen + dining, main WC, loggia) with full built-in furniture.
+
 ## 1.8.0
 
 ### New

@@ -18,7 +18,8 @@ export type DeviceKind =
   | "binary"
   | "camera"
   | "scene"
-  | "script";
+  | "script"
+  | "vacuum";
 
 const DOMAIN_KIND: Record<string, DeviceKind> = {
   light: "light",
@@ -32,6 +33,7 @@ const DOMAIN_KIND: Record<string, DeviceKind> = {
   sensor: "sensor",
   binary_sensor: "binary",
   camera: "camera",
+  vacuum: "vacuum",
   scene: "scene",
   script: "script",
 };

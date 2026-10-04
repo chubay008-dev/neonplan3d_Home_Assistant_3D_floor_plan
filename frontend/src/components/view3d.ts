@@ -1000,7 +1000,7 @@ export class Fp3dView3d extends LitElement {
   /** Long press: the quick menu at the device, or the details for devices without one. */
   private onDeviceHold(entityId: string, x: number, y: number): void {
     const kind = kindOf(entityId);
-    if (kind === "light" || kind === "cover" || kind === "switch" || kind === "fan" || kind === "lock" || kind === "camera") this._menu = { entity: entityId, x, y };
+    if (kind === "light" || kind === "cover" || kind === "switch" || kind === "fan" || kind === "lock" || kind === "camera" || kind === "vacuum") this._menu = { entity: entityId, x, y };
     else openMoreInfo(this, entityId);
   }
 
@@ -1232,7 +1232,8 @@ export class Fp3dView3d extends LitElement {
     if (entityId.startsWith("trail:")) return;
     const kind = kindOf(entityId);
     // blinds have no single on/off: a tap opens their quick menu (up, positions, stop, down); a camera shows its picture
-    if (kind === "cover" || kind === "camera") {
+    // robots get the same menu (start/stop cleaning, return to dock)
+    if (kind === "cover" || kind === "camera" || kind === "vacuum") {
       this._menu = { entity: entityId, x, y };
       return;
     }

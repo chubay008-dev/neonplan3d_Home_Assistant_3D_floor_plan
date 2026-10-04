@@ -1,0 +1,105 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "NeonPlan 3D",
+        "description": "Thêm trang sidebar để bạn vẽ nhà và xem trong 3D."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "NeonPlan 3D đã được cài đặt."
+    }
+  },
+  "title": "NeonPlan 3D",
+  "description": "Vẽ sơ đồ nhà trong Home Assistant và xem trong giao diện 3D neon.",
+  "header": {
+    "overview": "Tổng quan",
+    "editor": "Biên tập",
+    "extensions": "Tiện ích mở rộng"
+  },
+  "sidebar": {
+    "overview": "Tổng quan",
+    "editor": "Biên tập",
+    "extensions": "Tiện ích mở rộng"
+  },
+  "editor": {
+    "title": "Biên tập",
+    "wall_height": "Chiều cao tường",
+    "door_style": "Kiểu cửa",
+    "window_style": "Kiểu cửa sổ",
+    "furniture": "Đồ nội thất",
+    "add_floor": "Thêm tầng",
+    "add_room": "Thêm phòng",
+    "add_opening": "Thêm Cửa/Cửa sổ",
+    "add_furniture": "Thêm Đồ nội thất",
+    "delete": "Xóa",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "settings": "Cài đặt",
+    "help": "Trợ giúp",
+    "fullscreen": "Toàn màn hình",
+    "grid_on": "Bật lưới",
+    "grid_off": "Tắt lưới",
+    "snap_on": "Bật bắt dính",
+    "snap_off": "Tắt bắt dính",
+    "measure": "Đo khoảng cách",
+    "section": "Mặt cắt",
+    "area": "Diện tích",
+    "roof": "Mái nhà"
+  },
+  "viewer": {
+    "title": "Xem 3D",
+    "ar_vr": "AR/VR",
+    "measure_tool": "Công cụ đo",
+    "section_tool": "Công cụ cắt mặt",
+    "area_tool": "Công cụ diện tích",
+    "settings": "Cài đặt",
+    "help": "Trợ giúp",
+    "fullscreen": "Toàn màn hình",
+    "theme_neon": "Chủ đề Neon",
+    "theme_blueprint": "Chủ đề Kiến trúc",
+    "theme_day": "Chủ đề Ngày",
+    "room_panel": "Bảng phòng",
+    "room_names": "Tên phòng",
+    "controls": "Điều khiển",
+    "floor_thumbs": "Ảnh thu nhỏ tầng",
+    "stats": "Thống kê",
+    "alerts": "Cảnh báo",
+    "scenes": "Cảnh cảnh",
+    "motion_trail": "Vết di chuyển",
+    "weather": "Thời tiết",
+    "idle_return": "Quay lại khi không hoạt động",
+    "night": "Đếm ngược ban đêm",
+    "idle_orbit": "Quay quanh khi không hoạt động"
+  },
+  "extensions": {
+    "title": "Tiện ích mở rộng",
+    "furniture_packs": "Gói đồ nội thất",
+    "pro_addons": "Tiện ích Pro",
+    "camera_cockpit": "Cabina camera",
+    "weather_outside": "Thời tiết bên ngoài",
+    "live_screens": "Màn hình trực tiếp"
+  },
+  "room_panel": {
+    "title": "Bảng phòng",
+    "lights": "Đèn",
+    "covers": "Che",
+    "climate": "Khí hậu",
+    "media": "Đa phương tiện",
+    "sensors": "Cảm biến",
+    "cameras": "Camera",
+    "scene_script": "Cảnh / Kịch bản",
+    "all_entities": "Tất cả thực thể"
+  },
+  "messages": {
+    "saved": "Đã lưu",
+    "saved_success": "Lưu thành công",
+    "saved_failure": "Lưu thất bại",
+    "no_changes": "Không có thay đổi",
+    "confirm_delete": "Bạn có chắc chắn muốn xóa?",
+    "yes": "Có",
+    "no": "Không",
+    "ok": "OK",
+    "cancel": "Hủy"
+  }
+}

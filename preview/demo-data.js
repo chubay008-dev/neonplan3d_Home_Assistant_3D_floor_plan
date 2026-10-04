@@ -1,4 +1,18 @@
-// Invented demo home for the preview page (not anyone's real floor plan).
+// Demo apartamento 3 phòng ngủ, 2 WC – đầy đủ nội thất, mặt bằng sàn chung cư (tầng 30).
+//
+// Mặt bằng 13 m x 11.5 m (x: 0-13 phải, z: 0-11.5 xuống):
+//
+//   Ban công 1.5x4.5 (gắn phòng ngủ master, phía bắc)
+//   +------------------------------------------------------------------------------+
+//   | Phòng ngủ master | WC riêng | Phòng ngủ 3 |  Phòng ngủ 2  4.5x4.5         |
+//   |     4.5x4.5      | 1.5x2.5  |   2.5x4.5   |                                 |
+//   +------------------+----------+-------------+---------------------------------+
+//   |      Phòng khách 4.5x4.5      | Phòng ăn 3.5x2.5 | Lô gia | Phòng làm việc |
+//   |                               |                  | 2.5x2.5|    2.5x4.0     |
+//   +-------------------------------+------------------+--------+-----------------+
+//   | Nhà bếp 2.5x2.5 | WC chính 1.5x2.5 |      Hành lang (kết nối toàn bộ)      |
+//   +------------------------------------------------------------------------------+
+//   Cửa chính (front door) nằm trên cạnh nam, mở vào hành lang.
 
 const rect = (id, name, area_id, x0, z0, x1, z1, floor_material = "wood") => ({
   id,
@@ -17,87 +31,159 @@ const floor = (id, name, elevation, rooms) => ({
   id,
   name,
   elevation,
-  height: 2.5,
+  height: 2.75,
   cut_height: 1.15,
   rooms,
   openings: [],
   furniture: [],
   placements: [],
   background: null,
+  outdoor: [],
+  walls: [],
+  ha_floor: null,
 });
 
 export const DEMO_FLOORS = {
-  keller: { floor_id: "keller", name: "Keller", level: -1 },
-  erdgeschoss: { floor_id: "erdgeschoss", name: "Erdgeschoss", level: 0 },
-  obergeschoss: { floor_id: "obergeschoss", name: "Obergeschoss", level: 1 },
-  dachgeschoss: { floor_id: "dachgeschoss", name: "Dachgeschoss", level: 2 },
+  tram: { floor_id: "30", name: "Tầng 30", level: 30 },
 };
 
+// Tên khu vực trong Home Assistant (tiếng Việt)
 export const DEMO_AREAS = {
-  wohnzimmer: { area_id: "wohnzimmer", name: "Wohnzimmer", floor_id: "erdgeschoss" },
-  kueche: { area_id: "kueche", name: "Küche", floor_id: "erdgeschoss" },
-  schlafzimmer: { area_id: "schlafzimmer", name: "Schlafzimmer", floor_id: "erdgeschoss" },
-  bad: { area_id: "bad", name: "Bad", floor_id: "erdgeschoss" },
-  flur: { area_id: "flur", name: "Flur", floor_id: "erdgeschoss" },
-  kinderzimmer: { area_id: "kinderzimmer", name: "Kinderzimmer", floor_id: "obergeschoss" },
-  arbeitszimmer: { area_id: "arbeitszimmer", name: "Arbeitszimmer", floor_id: "obergeschoss" },
-  garage: { area_id: "garage", name: "Garage", floor_id: "erdgeschoss" },
-  waschkueche: { area_id: "waschkueche", name: "Waschküche", floor_id: "keller" },
-  heizung: { area_id: "heizung", name: "Heizungsraum", floor_id: "keller" },
-  vorrat: { area_id: "vorrat", name: "Vorratsraum", floor_id: "keller" },
-  hobby: { area_id: "hobby", name: "Hobbyraum", floor_id: "keller" },
+  phongKhach: { area_id: "phong_khach", name: "Phòng khách", floor_id: "30" },
+  master: { area_id: "phong_ngu_master", name: "Phòng ngủ master", floor_id: "30" },
+  wcMaster: { area_id: "wc_master", name: "WC riêng master", floor_id: "30" },
+  phongNguy3: { area_id: "phong_ngu_3", name: "Phòng ngủ 3", floor_id: "30" },
+  phongNguy2: { area_id: "phong_ngu_2", name: "Phòng ngủ 2", floor_id: "30" },
+  phongAn: { area_id: "phong_an", name: "Phòng ăn", floor_id: "30" },
+  loGia: { area_id: "lo_gia", name: "Lô gia", floor_id: "30" },
+  phongLamViec: { area_id: "phong_lam_viec", name: "Phòng làm việc", floor_id: "30" },
+  hanhLang: { area_id: "hanh_lang", name: "Hành lang", floor_id: "30" },
+  nhaBep: { area_id: "nha_bep", name: "Nhà bếp", floor_id: "30" },
+  wcChinh: { area_id: "wc_chinh", name: "WC chính", floor_id: "30" },
+  banCong: { area_id: "ban_cong", name: "Ban công", floor_id: "30" },
 };
 
 export const DEMO_BUILDING = {
   version: 1,
-  settings: { wall_exterior: 0.24, wall_interior: 0.12, grid: 0.05 },
+  settings: { wall_exterior: 0.24, wall_interior: 0.12, grid: 0.05, north: 0, roof: { type: "none", pitch: 35, overhang: 0.4 } },
   floors: [
-    floor("eg", "Erdgeschoss", 0, [
-      rect("wohnen", "Wohnzimmer", "wohnzimmer", 0, 0, 6, 4.6),
-      rect("kueche", "Küche", "kueche", 6, 0, 10, 4.6, "tiles"),
-      rect("schlafen", "Schlafzimmer", "schlafzimmer", 0, 4.6, 4.4, 8, "carpet"),
-      rect("bad", "Bad", "bad", 4.4, 4.6, 6.8, 8, "tiles"),
+    floor("30", "Tầng 30", 0, [
+      // Hàng trên (z 0-4.5)
+      rect("master", "Phòng ngủ master", "phong_ngu_master", 0, 0, 4.5, 4.5),
+      rect("wc_master", "WC riêng master", "wc_master", 4.5, 0, 6, 2.5, "tiles"),
+      rect("bed3", "Phòng ngủ 3", "phong_ngu_3", 6, 0, 8.5, 4.5, "wood"),
+      rect("bed2", "Phòng ngủ 2", "phong_ngu_2", 8.5, 0, 13, 4.5),
+      // Hàng giữa (z 4.5-9)
+      rect("living", "Phòng khách", "phong_khach", 0, 4.5, 4.5, 9, "oak"),
+      rect("dining", "Phòng ăn", "phong_an", 6, 4.5, 9.5, 7, "oak"),
+      rect("loggia", "Lô gia", "lo_gia", 10.5, 4.5, 13, 7, "tiles", [null, 1.05, null, null]),
+      rect("work", "Phòng làm việc", "phong_lam_viec", 10.5, 7, 13, 11),
+      // Nhà bếp + WC chính (z 9-11.5)
+      rect("kitchen", "Nhà bếp", "nha_bep", 0, 9, 2.5, 11.5, "tiles"),
+      rect("wc", "WC chính", "wc_chinh", 2.5, 9, 4, 11.5, "tiles"),
+      // Hành lang: mạch L kết nối cửa chính (nam) lên tận WC riêng + phòng ngủ
       {
-        id: "flur",
-        name: "Flur",
-        area_id: "flur",
+        id: "hall",
+        name: "Hành lang",
+        area_id: "hanh_lang",
         points: [
-          [6.8, 4.6],
-          [10, 4.6],
-          [10, 8],
-          [8.4, 8],
-          [8.4, 9.2],
-          [6.8, 9.2],
+          [4.5, 2.5],
+          [6, 2.5],
+          [6, 7],
+          [9.5, 7],
+          [9.5, 4.5],
+          [10.5, 4.5],
+          [10.5, 11],
+          [13, 11],
+          [13, 11.5],
+          [4, 11.5],
+          [4, 9],
+          [4.5, 9],
         ],
-        floor_material: "oak",
+        floor_material: "tiles",
       },
-      rect("garage", "Garage", "garage", 10, 0, 13.6, 5.2, "concrete"),
-    ]),
-    floor("og", "Obergeschoss", 2.75, [
-      rect("kind", "Kinderzimmer", "kinderzimmer", 0, 0, 4.4, 4.2, "carpet"),
-      rect("arbeit", "Arbeitszimmer", "arbeitszimmer", 4.4, 0, 10, 4.2, "oak"),
-      rect("badog", "Bad oben", null, 0, 4.2, 3.4, 8, "tiles"),
-      rect("gast", "Gästezimmer", null, 3.4, 4.2, 10, 8),
+      // Ban công 1.5 x 4.5 gắn phòng ngủ master (trần thấp 1.05 m, cửa trượt kính)
+      {
+        id: "balcony",
+        name: "Ban công",
+        area_id: "ban_cong",
+        points: [
+          [0, -1.5],
+          [4.5, -1.5],
+          [4.5, 0],
+          [0, 0],
+        ],
+        floor_material: "concrete",
+        wall_heights: [1.05, 1.05, null, 1.05],
+      },
     ]),
   ],
 };
 
-// Invented pictures (no real logos or photos): a cover for the TV and a camera still.
+// Cửa + cửa sổ (edge chỉ số cạnh của room, offset tính từ điểm bắt đầu cạnh)
+const O = (id, room_id, edge, offset, width, extra = {}) => ({
+  id,
+  room_id,
+  edge,
+  offset,
+  width,
+  type: "door",
+  sill: 0,
+  height: 2.05,
+  hinge: "left",
+  leaves: 1,
+  swing: "in",
+  contact2: null,
+  cover: null,
+  contact: null,
+  tilt: null,
+  ...extra,
+});
+
+DEMO_BUILDING.floors[0].openings = [
+  // Cửa chính (front door) trên cạnh nam của hành lang
+  O("door_front", "hall", 8, 7.5, 0.9, { style: "front", swing: "out" }),
+  // Cửa hành lang -> các phòng
+  O("door_wc", "hall", 9, 1.5, 0.75),
+  O("door_work", "hall", 5, 5.5, 0.9),
+  // Thông phòng khách sang hành lang (không khép)
+  O("pass_living", "living", 1, 2.0, 1.8, { style: "passage" }),
+  // Thông phòng ăn sang hành lang
+  O("pass_dining", "dining", 2, 1.75, 2.0, { style: "passage" }),
+  // Cửa lô gia (kính) từ hành lang
+  O("door_loggia", "loggia", 3, 1.25, 1.2, { style: "glass" }),
+  // Cửa các phòng ngủ
+  O("door_master", "master", 1, 3.2, 0.9),
+  O("door_wc_master", "wc_master", 3, 1.5, 0.75),
+  O("door_bed3", "bed3", 3, 1.5, 0.9),
+  O("door_bed2", "bed2", 2, 3.0, 0.9),
+  // Cửa bếp từ phòng khách
+  O("door_kitchen", "kitchen", 0, 1.25, 0.9),
+  // Cửa trượt ra ban công (từ phòng ngủ master)
+  O("door_balcony", "balcony", 2, 2.25, 1.8, { style: "sliding", leaves: 2, sill: 0, height: 2.1 }),
+  // Cửa sổ (sill 0.9, cao 1.3)
+  O("win_master", "master", 0, 2.25, 2.0, { type: "window", sill: 0.9, height: 1.3 }),
+  O("win_bed3", "bed3", 0, 1.25, 1.2, { type: "window", sill: 0.9, height: 1.3 }),
+  O("win_bed2", "bed2", 0, 2.25, 1.5, { type: "window", sill: 0.9, height: 1.3 }),
+  O("win_bed2_e", "bed2", 1, 1.5, 1.2, { type: "window", sill: 0.9, height: 1.3 }),
+  O("win_living", "living", 3, 2.25, 2.0, { type: "window", sill: 0.9, height: 1.3 }),
+  O("win_kitchen", "kitchen", 3, 1.25, 1.0, { type: "window", sill: 0.9, height: 1.3 }),
+  O("win_loggia", "loggia", 1, 1.0, 2.0, { type: "window", sill: 0.3, height: 1.75 }),
+  O("win_work", "work", 1, 2.0, 1.5, { type: "window", sill: 0.9, height: 1.3 }),
+];
+
 const svgPicture = (body) => `data:image/svg+xml;base64,${btoa(body)}`;
 const COVER = svgPicture(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#2b0a3d"/><stop offset="1" stop-color="#b3122e"/></linearGradient></defs><rect width="320" height="180" fill="url(#g)"/><circle cx="240" cy="70" r="38" fill="#ffb547" opacity="0.85"/><path d="M0 150 L90 95 L150 130 L230 80 L320 140 L320 180 L0 180 Z" fill="#12061c"/><text x="24" y="52" font-family="sans-serif" font-size="30" font-weight="700" fill="#fff">Serie</text></svg>',
-);
-// a stored picture for a screen rule (shown on the TV while Netflix runs)
-export const DEMO_PICTURES = {
-  pic_demo: svgPicture(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#101010"/><text x="160" y="105" text-anchor="middle" font-family="sans-serif" font-size="56" font-weight="900" fill="#e50914">LOGO</text></svg>',
-  ),
-};
-const CAMERA_STILL = svgPicture(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#1b2230"/><rect x="0" y="120" width="320" height="60" fill="#2a3444"/><rect x="40" y="60" width="90" height="70" fill="#3b4a60"/><rect x="190" y="40" width="80" height="90" fill="#324055"/><text x="12" y="20" font-family="monospace" font-size="12" fill="#cfd8e6">KAMERA 1  12:04:31</text></svg>',
+  '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14532d"/><stop offset="1" stop-color="#b91c1c"/></linearGradient></defs><rect width="320" height="180" fill="url(#g)"/><text x="24" y="90" font-family="sans-serif" font-size="36" font-weight="700" fill="#fff">Sáng nay</text></svg>',
 );
 
-// Invented devices: registry entries, states and placements for the preview.
+export const DEMO_PICTURES = {
+  pic_cam_hanhlang: svgPicture(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#0f172a"/><rect x="20" y="20" width="140" height="90" fill="#1e293b"/><text x="160" y="24" font-family="monospace" font-size="12" fill="#38bdf8">LIVE</text><text x="16" y="130" font-family="monospace" font-size="11" fill="#94a3b8">KAMERA HÀNH LANG</text></svg>',
+  ),
+};
+
+// Thiết bị điện: đèn
 const light = (id, name, area, on, extra = {}) => ({
   entry: { entity_id: `light.${id}`, area_id: area },
   state: {
@@ -114,339 +200,207 @@ const light = (id, name, area, on, extra = {}) => ({
     },
   },
 });
-const entity = (entity_id, area, state, attributes) => ({ entry: { entity_id, area_id: area }, state: { entity_id, state, attributes } });
 
+const entity = (entity_id, area, state, attributes) => ({
+  entry: { entity_id, area_id: area },
+  state: { entity_id, state, attributes },
+});
+
+const place = (entity_id, x, z) => ({ entity_id, x, z, y: null, mount: "ceiling" });
+
+// Danh sách thiết bị cho preview (tất cả entry + state)
 const DEVICES = [
-  light("wohnzimmer_decke", "Wohnzimmer Deckenlicht", "wohnzimmer", true),
-  light("stehlampe", "Stehlampe", "wohnzimmer", true, { brightness: 90, color_mode: "hs", rgb_color: [255, 150, 60] }),
-  light("kueche", "Küchenlicht", "kueche", false),
-  light("schlafzimmer", "Schlafzimmer Decke", "schlafzimmer", false),
-  light("nachttisch", "Nachttisch", "schlafzimmer", true, { brightness: 60 }),
-  light("bad", "Bad Spots", "bad", true, { brightness: 220, color_temp_kelvin: 4000 }),
-  light("flur", "Flurlicht", "flur", true, { brightness: 120 }),
-  light("kinderzimmer", "Kinderzimmer Decke", "kinderzimmer", true, { brightness: 150 }),
-  light("schreibtisch", "Schreibtischlampe", "arbeitszimmer", true, { color_temp_kelvin: 4500 }),
-  light("esstisch", "Esstisch Pendel", "kueche", true, { brightness: 140 }),
-  light("kueche_links", "Küche links", "kueche", true, { brightness: 230, color_mode: "hs", rgb_color: [255, 70, 40] }),
-  light("kueche_rechts", "Küche rechts", "kueche", true, { brightness: 230, color_mode: "hs", rgb_color: [60, 110, 255] }),
-  light("garten", "Garten Wegleuchten", null, true, { brightness: 170 }),
-  light("pool", "Pool Spot", null, true, { brightness: 200, color_mode: "hs", rgb_color: [40, 200, 255] }),
-  light("haustuer", "Haustür Außenlicht", "flur", true, { brightness: 200 }),
-  light("led_band", "LED Band", "wohnzimmer", true, { brightness: 160, color_mode: "hs", rgb_color: [120, 90, 255], effect: "colorloop", effect_list: ["colorloop", "none"] }),
-  entity("cover.wohnzimmer", "wohnzimmer", "open", { friendly_name: "Wohnzimmer Rollladen", current_position: 70, supported_features: 15 }),
-  entity("cover.kueche", "kueche", "open", { friendly_name: "Rollladen Küche", current_position: 40, supported_features: 15 }),
-  entity("climate.wohnzimmer", "wohnzimmer", "heat", {
-    friendly_name: "Wohnzimmer Heizung",
-    current_temperature: 21.4,
-    temperature: 21.5,
-    hvac_modes: ["off", "heat", "auto"],
-    hvac_action: "heating",
-    min_temp: 5,
-    max_temp: 30,
-    target_temp_step: 0.5,
-  }),
-  entity("climate.schlafzimmer", "schlafzimmer", "heat", {
-    friendly_name: "Schlafzimmer Heizung",
-    current_temperature: 18.2,
-    temperature: 18,
-    hvac_modes: ["off", "heat"],
-    hvac_action: "idle",
-    min_temp: 5,
-    max_temp: 30,
-  }),
-  entity("media_player.fernseher", "wohnzimmer", "playing", { friendly_name: "Fernseher", device_class: "tv", app_name: "Netflix", media_title: "Serie", volume_level: 0.35, entity_picture: COVER }),
-  entity("switch.kaffeemaschine", "kueche", "on", { friendly_name: "Kaffeemaschine" }),
-  entity("camera.wohnzimmer", "wohnzimmer", "idle", { friendly_name: "Wohnzimmer Kamera", entity_picture: CAMERA_STILL }),
-  entity("sensor.wohnzimmer_temperatur", "wohnzimmer", "21.4", { friendly_name: "Wohnzimmer Temperatur", device_class: "temperature", unit_of_measurement: "°C" }),
-  entity("sensor.kueche_temperatur", "kueche", "23.4", { friendly_name: "Küche Temperatur", device_class: "temperature", unit_of_measurement: "°C" }),
-  entity("sensor.schlafzimmer_temperatur", "schlafzimmer", "18.1", { friendly_name: "Schlafzimmer Temperatur", device_class: "temperature", unit_of_measurement: "°C" }),
-  entity("sensor.bad_temperatur", "bad", "24.6", { friendly_name: "Bad Temperatur", device_class: "temperature", unit_of_measurement: "°C" }),
-  entity("sensor.flur_temperatur", "flur", "19.6", { friendly_name: "Flur Temperatur", device_class: "temperature", unit_of_measurement: "°C" }),
-  entity("sun.sun", null, "above_horizon", { friendly_name: "Sonne", elevation: 32, azimuth: 205 }),
-  entity("sensor.wohnzimmer_feuchte", "wohnzimmer", "48", { friendly_name: "Wohnzimmer Luftfeuchtigkeit", device_class: "humidity", unit_of_measurement: "%" }),
-  entity("binary_sensor.kueche_fenster", "kueche", "on", { friendly_name: "Küche Fenster", device_class: "window" }),
-  entity("binary_sensor.kueche_rauch", "kueche", "off", { friendly_name: "Küche Rauchmelder", device_class: "smoke" }),
-  entity("binary_sensor.garage_auto", "garage", "on", { friendly_name: "Auto in der Garage", device_class: "occupancy" }),
-  entity("sensor.garage_fahrzeugtyp", "garage", "van", { friendly_name: "Fahrzeugtyp Garage" }),
-  entity("device_tracker.zweitwagen", null, "not_home", { friendly_name: "Zweitwagen" }),
-  entity("weather.zuhause", null, "sunny", { friendly_name: "Wetter" }),
-  entity("alarm_control_panel.haus", null, "disarmed", { friendly_name: "Alarmanlage" }),
-  entity("scene.wohnzimmer_kino", "wohnzimmer", "unknown", { friendly_name: "Wohnzimmer Kino" }),
-  entity("scene.wohnzimmer_lesen", "wohnzimmer", "unknown", { friendly_name: "Wohnzimmer Lesen" }),
-  entity("script.wohnzimmer_alles_aus", "wohnzimmer", "off", { friendly_name: "Wohnzimmer Alles aus" }),
-  entity("binary_sensor.flur_bewegung", "flur", "off", { friendly_name: "Flur Bewegung", device_class: "motion" }),
-  entity("binary_sensor.kueche_praesenz", "kueche", "off", { friendly_name: "Küche Präsenz", device_class: "presence" }),
-  entity("binary_sensor.kuehlschrank_tuer", "kueche", "off", { friendly_name: "Kühlschrank Tür", device_class: "door" }),
-  entity("binary_sensor.gefrierfach_tuer", "kueche", "on", { friendly_name: "Gefrierfach Tür", device_class: "door" }),
-  entity("binary_sensor.wohnzimmer_kamera_bewegung", "wohnzimmer", "on", { friendly_name: "Wohnzimmer Kamera Bewegung", device_class: "motion" }),
-  entity("binary_sensor.haustuer", "flur", "off", { friendly_name: "Haustür", device_class: "door" }),
-  entity("cover.garagentor", "garage", "open", { friendly_name: "Garagentor", device_class: "garage", current_position: 60, supported_features: 15 }),
-  entity("binary_sensor.wohnzimmer_terrasse", "wohnzimmer", "on", { friendly_name: "Terrassentür", device_class: "opening" }),
-  entity("vacuum.saugi", "wohnzimmer", "cleaning", { friendly_name: "Saugi", battery_level: 64 }),
-  entity("binary_sensor.wohnzimmer_terrasse_2", "wohnzimmer", "off", { friendly_name: "Terrassentür Standflügel", device_class: "opening" }),
-  entity("binary_sensor.schlafzimmer_fenster", "schlafzimmer", "on", { friendly_name: "Schlafzimmer Fenster", device_class: "window" }),
-  entity("binary_sensor.schlafzimmer_kipp", "schlafzimmer", "on", { friendly_name: "Schlafzimmer Fenster gekippt", device_class: "window" }),
-  entity("scene.wohnzimmer_film", "wohnzimmer", "2024-01-01T00:00:00", { friendly_name: "Wohnzimmer Film" }),
-  entity("scene.wohnzimmer_lesen", "wohnzimmer", "2024-01-01T00:00:00", { friendly_name: "Wohnzimmer Lesen" }),
-  entity("script.gute_nacht", "schlafzimmer", "off", { friendly_name: "Gute Nacht" }),
-  // energy (invented values)
-  entity("sensor.netz_leistung", "flur", "420", { friendly_name: "Netz Leistung", device_class: "power", unit_of_measurement: "W" }),
-  entity("sensor.pv_leistung", "flur", "1150", { friendly_name: "PV Leistung", device_class: "power", unit_of_measurement: "W" }),
-  entity("sensor.akku_leistung", "flur", "-300", { friendly_name: "Akku Leistung", device_class: "power", unit_of_measurement: "W" }),
-  entity("sensor.akku_ladestand", "flur", "64", { friendly_name: "Akku Ladestand", device_class: "battery", unit_of_measurement: "%" }),
-  entity("sensor.strompreis", null, "0.29", { friendly_name: "Strompreis", device_class: "monetary", unit_of_measurement: "€/kWh" }),
-  entity("sensor.fernseher_leistung", "wohnzimmer", "95", { friendly_name: "Fernseher Leistung", device_class: "power", unit_of_measurement: "W" }),
-  entity("sensor.kaffeemaschine_leistung", "kueche", "0.9", { friendly_name: "Kaffeemaschine Leistung", device_class: "power", unit_of_measurement: "kW" }),
-  entity("sensor.kuehlschrank_leistung", "kueche", "85", { friendly_name: "Kühlschrank Leistung", device_class: "power", unit_of_measurement: "W" }),
-  entity("sensor.waschmaschine_leistung", "bad", "430", { friendly_name: "Waschmaschine Leistung", device_class: "power", unit_of_measurement: "W" }),
-  entity("sensor.pc_leistung", "arbeitszimmer", "70", { friendly_name: "Computer Leistung", device_class: "power", unit_of_measurement: "W" }),
-  entity("sensor.gaszaehler", "garage", "4821.374", { friendly_name: "Gaszähler", device_class: "gas", unit_of_measurement: "m³" }),
-  // people and their room sensors (as ESPresense or Bermuda would report them)
-  entity("person.mia", null, "home", { friendly_name: "Mia" }),
-  entity("person.tom", null, "home", { friendly_name: "Tom Beispiel" }),
-  entity("person.lea", null, "not_home", { friendly_name: "Lea" }),
-  entity("sensor.mia_raum", null, "Wohnzimmer", { friendly_name: "Mia Raum" }),
-  entity("sensor.tom_raum", null, "Küche", { friendly_name: "Tom Raum" }),
-  entity("sensor.lea_raum", null, "not_home", { friendly_name: "Lea Raum" }),
+  // Phòng ngủ master
+  light("master_decke", "Đèn phòng ngủ master", "phong_ngu_master", true),
+  { entry: { entity_id: "light.master_tranh", area_id: "phong_ngu_master" }, state: { entity_id: "light.master_tranh", state: "on", attributes: { friendly_name: "Đèn tranh master", brightness: 90, color_mode: "hs", rgb_color: [255, 190, 120] } } },
+  { entry: { entity_id: "climate.master", area_id: "phong_ngu_master" }, state: { entity_id: "climate.master", state: "cool", attributes: { friendly_name: "Điều hòa phòng master", current_temperature: 24.2, temperature: 25, hvac_modes: ["off", "heat", "cool"], hvac_action: "idle", min_temp: 16, max_temp: 32 } } },
+  // WC riêng master
+  light("wc_master_decke", "Đèn WC riêng", "wc_master", true, { brightness: 220, color_temp_kelvin: 4000 }),
+  // Phòng ngủ 3
+  light("phong_ngu_3_decke", "Đèn phòng ngủ 3", "phong_ngu_3", true),
+  // Phòng ngủ 2
+  light("phong_ngu_2_decke", "Đèn phòng ngủ 2", "phong_ngu_2", true),
+  { entry: { entity_id: "climate.phong_ngu_2", area_id: "phong_ngu_2" }, state: { entity_id: "climate.phong_ngu_2", state: "cool", attributes: { friendly_name: "Điều hòa phòng ngủ 2", current_temperature: 25.5, temperature: 24, hvac_modes: ["off", "heat", "cool", "auto"], hvac_action: "cooling", min_temp: 16, max_temp: 32 } } },
+  // Phòng khách
+  light("phong_khach_decke", "Đèn phòng khách", "phong_khach", true),
+  { entry: { entity_id: "light.stehlampe", area_id: "phong_khach" }, state: { entity_id: "light.stehlampe", state: "on", attributes: { friendly_name: "Đèn đứng phòng khách", brightness: 90, color_mode: "hs", rgb_color: [255, 150, 60] } } },
+  { entry: { entity_id: "climate.phong_khach", area_id: "phong_khach" }, state: { entity_id: "climate.phong_khach", state: "cool", attributes: { friendly_name: "Điều hòa phòng khách", current_temperature: 23.8, temperature: 26, hvac_modes: ["off", "heat", "cool", "auto"], hvac_action: "cooling", min_temp: 16, max_temp: 32 } } },
+  { entry: { entity_id: "media_player.tivi_phongkhach", area_id: "phong_khach" }, state: { entity_id: "media_player.tivi_phongkhach", state: "playing", attributes: { friendly_name: "Tivi", device_class: "tv", app_name: "Netflix", media_title: "Phim hành động", volume_level: 0.4, entity_picture: COVER } } },
+  { entry: { entity_id: "camera.hanh_lang", area_id: "hanh_lang" }, state: { entity_id: "camera.hanh_lang", state: "idle", attributes: { friendly_name: "Camera hành lang", entity_picture: DEMO_PICTURES.pic_cam_hanhlang } } },
+  { entry: { entity_id: "cover.rèm_phong_khach", area_id: "phong_khach" }, state: { entity_id: "cover.rèm_phong_khach", state: "closed", attributes: { friendly_name: "Rèm cửa sổ phòng khách", current_position: 0, supported_features: 15 } } },
+  // Phòng ăn
+  light("phong_an_pendant", "Đèn thả phòng ăn", "phong_an", true, { brightness: 140 }),
+  // Lô gia
+  light("lo_gia_decke", "Đèn lô gia", "lo_gia", true, { brightness: 170 }),
+  // Phòng làm việc
+  light("phong_lam_viec_decke", "Đèn phòng làm việc", "phong_lam_viec", true),
+  // Nhà bếp
+  light("nha_bep_decke", "Đèn nhà bếp", "nha_bep", true),
+  { entry: { entity_id: "switch.kaffeemaschine", area_id: "nha_bep" }, state: { entity_id: "switch.kaffeemaschine", state: "on", attributes: { friendly_name: "Máy pha cà phê" } } },
+  // WC chính
+  light("wc_chinh_decke", "Đèn WC chính", "wc_chinh", true, { brightness: 220, color_temp_kelvin: 4000 }),
+  // Hành lang
+  light("hanh_lang_decke", "Đèn hành lang", "hanh_lang", true, { brightness: 190 }),
+  // Ban công
+  light("ban_cong", "Đèn ban công", "ban_cong", true, { brightness: 160, color_temp_kelvin: 3000 }),
+  // Cảm biến + thiết bị khác
+  { entry: { entity_id: "sensor.phong_khach_nhietao", area_id: "phong_khach" }, state: { entity_id: "sensor.phong_khach_nhietao", state: "24.5", attributes: { friendly_name: "Nhiệt độ phòng khách", device_class: "temperature", unit_of_measurement: "°C" } } },
+  { entry: { entity_id: "sensor.phong_khach_doam", area_id: "phong_khach" }, state: { entity_id: "sensor.phong_khach_doam", state: "52", attributes: { friendly_name: "Độ ẩm phòng khách", device_class: "humidity", unit_of_measurement: "%" } } },
+  { entry: { entity_id: "sensor.nha_bep_dien", area_id: "nha_bep" }, state: { entity_id: "sensor.nha_bep_dien", state: "0.8", attributes: { friendly_name: "Điện nhà bếp", device_class: "power", unit_of_measurement: "kW" } } },
+  { entry: { entity_id: "binary_sensor.cua_ra_vao", area_id: "hanh_lang" }, state: { entity_id: "binary_sensor.cua_ra_vao", state: "off", attributes: { friendly_name: "Cửa ra vào", device_class: "door" } } },
+  { entry: { entity_id: "binary_sensor.cua_soo_bep", area_id: "nha_bep" }, state: { entity_id: "binary_sensor.cua_soo_bep", state: "off", attributes: { friendly_name: "Cửa sổ bếp", device_class: "window" } } },
+  { entry: { entity_id: "binary_sensor.khoi_bep", area_id: "nha_bep" }, state: { entity_id: "binary_sensor.khoi_bep", state: "off", attributes: { friendly_name: "Cảm biến khói", device_class: "smoke" } } },
+  { entry: { entity_id: "binary_sensor.ro_nuoc_wc", area_id: "wc_chinh" }, state: { entity_id: "binary_sensor.ro_nuoc_wc", state: "off", attributes: { friendly_name: "Cảm biến rò nước", device_class: "moisture" } } },
+  { entry: { entity_id: "switch.may_giat", area_id: "lo_gia" }, state: { entity_id: "switch.may_giat", state: "on", attributes: { friendly_name: "Máy giặt" } } },
+  // Robot hút bụi số 1 (đặt trong phòng khách)
+  { entry: { entity_id: "vacuum.robot_vacuum", area_id: "phong_khach" }, state: { entity_id: "vacuum.robot_vacuum", state: "cleaning", attributes: { friendly_name: "Robot hút bụi", battery_level: 96, battery_last_charged_by: "Bát nạp", status: "Cleaning", features: 1015 } } },
+  // Robot hút bụi số 2 (phòng master) – bật chạy sẵn
+  { entry: { entity_id: "vacuum.robot_vacuum_2", area_id: "phong_ngu_master" }, state: { entity_id: "vacuum.robot_vacuum_2", state: "cleaning", attributes: { friendly_name: "Robot hút bụi master", battery_level: 82, battery_last_charged_by: "Bát nạp", status: "Cleaning", features: 1015 } } },
+  // Thời tiết + mặt trời
+  { entry: { entity_id: "weather.vietnam", area_id: null }, state: { entity_id: "weather.vietnam", state: "rainy", attributes: { friendly_name: "Thời tiết", cloud_coverage: 60, wind_speed: 12, wind_speed_unit: "km/h" } } },
+  { entry: { entity_id: "sun.sun", area_id: null }, state: { entity_id: "sun.sun", state: "above_horizon", attributes: { friendly_name: "Mặt trời", elevation: 45, azimuth: 180 } } },
 ];
-// a LED matrix with many light entities: only the main one (without a name of its own) is shown first
-for (const [suffix, name] of [
-  ["", null],
-  ["_indicator_1", "Indicator 1"],
-  ["_indicator_2", "Indicator 2"],
-  ["_indicator_3", "Indicator 3"],
-  ["_matrix", "Matrix"],
-]) {
-  const id = `light.pixeluhr${suffix}`;
-  DEVICES.push({
-    entry: { entity_id: id, area_id: "wohnzimmer", device_id: "d_pixeluhr", ...(name ? { name } : {}) },
-    state: { entity_id: id, state: "off", attributes: { friendly_name: name ? `Pixeluhr ${name}` : "Pixeluhr", supported_color_modes: ["hs"] } },
-  });
-}
-// devices with a power sensor of their own
-for (const [id, device] of [
-  ["camera.wohnzimmer", "d_cam"],
-  ["binary_sensor.wohnzimmer_kamera_bewegung", "d_cam"],
-  ["media_player.fernseher", "d_tv"],
-  ["sensor.fernseher_leistung", "d_tv"],
-  ["switch.kaffeemaschine", "d_kaffee"],
-  ["sensor.kaffeemaschine_leistung", "d_kaffee"],
-]) {
-  DEVICES.find((d) => d.entry.entity_id === id).entry.device_id = device;
-}
 
+// Export cho preview (theo đúng HomeAssistant: object index theo entity_id)
 export const DEMO_ENTITIES = Object.fromEntries(DEVICES.map((d) => [d.entry.entity_id, d.entry]));
 export const DEMO_STATES = Object.fromEntries(DEVICES.map((d) => [d.state.entity_id, d.state]));
 
-const place = (entity_id, x, z) => ({ entity_id, x, z, y: null });
+// Ánh sáng + thiết bị đặt trong phòng
 DEMO_BUILDING.floors[0].placements = [
-  place("light.wohnzimmer_decke", 3.6, 2.6),
-  { ...place("camera.wohnzimmer", 0.2, 0.2), mount: "wall", rotation: 315 },
-  { entity_id: "light.stehlampe", x: 5.3, z: 0.7, y: null, mount: "floor" },
-  place("cover.wohnzimmer", 1.6, 0.4),
-  place("climate.wohnzimmer", 0.5, 2.2),
-  place("media_player.fernseher", 3.0, 0.4),
-
-  place("switch.kaffeemaschine", 9.4, 0.6),
-  place("binary_sensor.kueche_fenster", 7.2, 0.4),
-  place("light.schlafzimmer", 2.9, 6.8),
-  { entity_id: "light.nachttisch", x: 3.3, z: 7.78, y: null, mount: "table" },
-
-  place("light.flur", 8.8, 6.9),
-];
-DEMO_BUILDING.floors[0].placements.push(place("sensor.gaszaehler", 12.9, 4.6));
-DEMO_BUILDING.floors[0].placements.push(
-  place("sensor.kuehlschrank_leistung", 6.35, 0.8),
-  place("sensor.waschmaschine_leistung", 6.4, 6.9),
-  place("sensor.akku_leistung", 7.3, 8.8),
-);
-DEMO_BUILDING.floors[1].placements = [place("light.kinderzimmer", 2.9, 2.8), place("light.schreibtisch", 6.2, 1.2), place("sensor.pc_leistung", 9.0, 0.9)];
-DEMO_BUILDING.energy = {
-  meter: { floor_id: "eg", x: 9.75, z: 5.0 },
-  grid: "sensor.netz_leistung",
-  grid_invert: false,
-  solar: "sensor.pv_leistung",
-  battery: "sensor.akku_leistung",
-  battery_invert: false,
-  battery_soc: "sensor.akku_ladestand",
-  tariff: "sensor.strompreis",
-};
-DEMO_BUILDING.presence = [
-  { person: "person.mia", sensor: "sensor.mia_raum" },
-  { person: "person.tom", sensor: "sensor.tom_raum" },
-  { person: "person.lea", sensor: "sensor.lea_raum" },
-];
-
-// Invented doors, windows and furniture for the preview.
-let openingId = 0;
-const hole = (type, room_id, edge, offset, width, extra = {}) => ({
-  id: `o${++openingId}`,
-  room_id,
-  edge,
-  offset,
-  width,
-  type,
-  sill: type === "door" ? 0 : 0.9,
-  height: type === "door" ? 2.05 : 1.3,
-  hinge: "left",
-  cover: null,
-  contact: null,
-  tilt: null,
-  ...extra,
-});
-const terrace = { sill: 0, height: 2.15 };
-DEMO_BUILDING.floors[0].openings = [
-  hole("window", "wohnen", 0, 1.6, 1.4, { contact: "none" }),
-  hole("window", "wohnen", 0, 4.3, 1.8, { ...terrace, leaves: 2, contact: "binary_sensor.wohnzimmer_terrasse", contact2: "binary_sensor.wohnzimmer_terrasse_2", hinge: "right" }),
-  hole("window", "wohnen", 3, 2.3, 1.2, { contact: "none" }),
-  hole("door", "wohnen", 1, 3.0, 1.4, { style: "passage" }),
-  hole("door", "wohnen", 2, 4.2, 0.9),
-  hole("window", "kueche", 0, 2.4, 1.2),
-  hole("door", "kueche", 1, 3.6, 0.9, { hinge: "right" }),
-  hole("garage", "garage", 1, 2.6, 2.5, { sill: 0, height: 2.1 }),
-  hole("door", "kueche", 2, 1.6, 0.9),
-  hole("window", "schlafen", 2, 2.2, 1.4, { contact: "binary_sensor.schlafzimmer_fenster", tilt: "binary_sensor.schlafzimmer_kipp" }),
-  hole("window", "schlafen", 3, 1.7, 1.0, { contact: "none" }),
-  hole("window", "bad", 2, 1.2, 0.8, { sill: 1.3, height: 0.8 }),
-  hole("door", "bad", 1, 1.2, 0.8),
-  hole("door", "flur", 4, 0.8, 1.4, { swing: "out", style: "sidelight" }),
-];
-DEMO_BUILDING.floors[1].openings = [
-  hole("window", "kind", 0, 2.2, 1.2),
-  hole("window", "arbeit", 0, 2.8, 1.6),
-  hole("window", "gast", 2, 3.0, 1.2),
-  hole("door", "kind", 1, 3.3, 0.9),
+  // Phòng ngủ master
+  place("light.master_decke", 2.2, 2.2),
+  { entity_id: "light.master_tranh", x: 0.35, z: 1.6, y: null, mount: "wall" },
+  { entity_id: "climate.master", x: 2.2, z: 0.35, y: null, mount: "wall" },
+  // WC riêng master
+  place("light.wc_master_decke", 5.25, 1.0),
+  // Phòng ngủ 3
+  place("light.phong_ngu_3_decke", 7.25, 2.0),
+  // Phòng ngủ 2
+  place("light.phong_ngu_2_decke", 10.75, 2.0),
+  { entity_id: "climate.phong_ngu_2", x: 12.5, z: 0.35, y: null, mount: "wall" },
+  // Phòng khách
+  place("light.phong_khach_decke", 2.2, 6.5),
+  { entity_id: "light.stehlampe", x: 4.0, z: 8.6, y: null, mount: "floor" },
+  { entity_id: "climate.phong_khach", x: 2.2, z: 4.7, y: null, mount: "wall" },
+  { entity_id: "media_player.tivi_phongkhach", x: 4.3, z: 6.5, y: null, mount: "wall" },
+  { entity_id: "cover.rèm_phong_khach", x: 0.3, z: 6.5, y: null, mount: "wall" },
+  // Phòng ăn
+  { entity_id: "light.phong_an_pendant", x: 7.75, z: 5.75, y: null, mount: "ceiling" },
+  // Lô gia
+  place("light.lo_gia_decke", 11.75, 5.75),
+  { entity_id: "switch.may_giat", x: 10.8, z: 4.9 },
+  // Phòng làm việc
+  place("light.phong_lam_viec_decke", 11.75, 9.0),
+  // Nhà bếp
+  place("light.nha_bep_decke", 1.25, 10.2),
+  { entity_id: "switch.kaffeemaschine", x: 0.35, z: 11.3 },
+  { entity_id: "binary_sensor.khoi_bep", x: 1.25, z: 9.3, y: null, mount: "ceiling" },
+  // WC chính
+  place("light.wc_chinh_decke", 3.25, 10.2),
+  { entity_id: "binary_sensor.ro_nuoc_wc", x: 3.2, z: 11.1 },
+  // Hành lang
+  place("light.hanh_lang_decke", 7.0, 10.2),
+  { entity_id: "camera.hanh_lang", x: 10.1, z: 11.2, y: null, mount: "wall", rotation: 135 },
+  { entity_id: "binary_sensor.cua_ra_vao", x: 5.5, z: 11.2 },
+  { entity_id: "binary_sensor.cua_soo_bep", x: 0.3, z: 10.2, y: null, mount: "wall" },
+  // Ban công
+  place("light.ban_cong", 2.25, -0.75),
+  // Thiết bị "ẩn" (không cần vị trí trong nhà)
+  { entity_id: "sensor.phong_khach_nhietao", x: 0, z: 0 },
+  { entity_id: "sensor.phong_khach_doam", x: 0, z: 0 },
+  { entity_id: "sensor.nha_bep_dien", x: 0, z: 0 },
 ];
 
-let furnitureId = 0;
-const item = (type, x, z, w, d, h, rotation = 0) => ({ id: `m${++furnitureId}`, type, x, z, w, d, h, rotation, variant: null });
+// Đồ nội thất đầy đủ cho căn hộ (type = loại nội thất built-in của app)
 DEMO_BUILDING.floors[0].furniture = [
-  item("rug", 2.4, 2.3, 2.6, 1.7, 0.01),
-  item("sofa", 2.4, 3.7, 2.3, 0.92, 0.82, 180),
-  item("armchair", 0.75, 2.2, 0.85, 0.85, 0.8, 270),
-  { ...item("tv_board", 2.4, 0.25, 1.8, 0.42, 0.5), pictures: [{ entity: "media_player.fernseher", attribute: "app_name", state: "netflix", image: "pic_demo" }] },
-  item("plant", 5.55, 0.45, 0.5, 0.5, 1.2),
-  item("shelf", 5.8, 2.6, 0.9, 0.35, 1.9, 90),
-  item("fridge", 6.35, 0.36, 0.6, 0.66, 1.85),
-  item("kitchen", 7.25, 0.31, 1.2, 0.62, 0.92),
-  item("stove", 8.15, 0.31, 0.6, 0.62, 0.92),
-  item("sink", 8.9, 0.31, 0.9, 0.62, 0.92),
-  item("kitchen", 9.65, 0.31, 0.6, 0.62, 0.92),
-  item("kitchen_wall", 7.25, 0.18, 1.2, 0.35, 0.7),
-  item("kitchen_wall", 8.9, 0.18, 0.9, 0.35, 0.7),
-  item("corner_bench", 7.1, 3.55, 2.0, 1.6, 0.9, 270),
-  item("table", 8.0, 2.9, 1.3, 0.85, 0.75),
-  { ...item("lamp_pendant", 8.0, 2.9, 0.3, 0.3, 0.95), entity: "light.esstisch", variant: "globe" },
-  { ...item("radiator", 0.08, 2.3, 1.0, 0.1, 0.6, 270), entity: "climate.wohnzimmer" },
-  ...[
-    [7.6, 10.4],
-    [7.6, 12.4],
-  ].map(([x, z]) => ({ ...item("lamp_bollard", x, z, 0.16, 0.16, 0.8), entity: "light.garten" })),
-  { ...item("lamp_garden", 12.4, -3.4, 0.12, 0.12, 0.3), entity: "light.pool" },
-  { ...item("lamp_wall", 8.9, 9.5, 0.22, 0.12, 0.2), entity: "light.haustuer" },
-  { ...item("lamp_ceiling", 7.0, 2.1, 0.45, 0.45, 0.08), entity: "light.kueche_links" },
-  { ...item("lamp_ceiling", 9.0, 2.1, 0.45, 0.45, 0.08), entity: "light.kueche_rechts" },
-  ...[
-    [5.0, 5.4],
-    [6.2, 5.4],
-    [5.0, 6.9],
-    [6.2, 6.9],
-  ].map(([x, z]) => ({ ...item("lamp_downlight", x, z, 0.1, 0.1, 0.02), entity: "light.bad" })),
-  { ...item("led_strip", 2.4, 0.08, 3.2, 0.04, 0.03), entity: "light.led_band" },
-  item("chair", 8.4, 2.2, 0.45, 0.5, 0.9),
-  item("chair", 8.95, 2.9, 0.45, 0.5, 0.9, 270),
-  item("bed", 2.2, 6.97, 1.6, 2.05, 0.9, 180),
-  item("nightstand", 1.1, 7.78, 0.45, 0.4, 0.5, 180),
-  item("nightstand", 3.3, 7.78, 0.45, 0.4, 0.5, 180),
-  item("wardrobe", 0.31, 5.55, 1.6, 0.6, 2.1, 270),
-  item("bathtub", 5.6, 7.6, 1.7, 0.75, 0.58, 180),
-  item("wc", 4.72, 5.35, 0.38, 0.6, 0.8, 270),
-  item("washbasin", 6.55, 5.3, 0.6, 0.46, 0.85, 90),
-  item("washer", 6.47, 6.45, 0.6, 0.6, 0.85, 90),
-  item("coffee_table", 2.4, 2.4, 1.1, 0.6, 0.42),
-  item("stairs", 9.42, 6.3, 1.0, 3.2, 2.75),
-  item("wardrobe", 7.1, 6.4, 1.2, 0.4, 2.0, 270),
-  { ...item("robot_vacuum", 5.7, 3.2, 0.36, 0.5, 0.1, 270), entity: "vacuum.saugi" },
-  {
-    ...item("parking", 11.7, 2.6, 2.6, 5.2, 0.02, 270),
-    entity: "binary_sensor.garage_auto",
-    vehicle: "pack:mastershort.vehicles:van",
-    scale: 0.95,
-    type_entity: "sensor.garage_fahrzeugtyp",
-    types: [
-      { state: "van", vehicle: "pack:mastershort.vehicles:van" },
-      { state: "suv", vehicle: "pack:mastershort.vehicles:suv" },
-    ],
-  },
-  { ...item("parking", 16.2, 2.7, 2.6, 5.2, 0.02, 90), entity: "device_tracker.zweitwagen", vehicle: "pack:mastershort.vehicles:compact" },
-];
-// a partition through half of the guest room (a free-standing wall)
-// a half-height wall between the kids' room and the office (edge 1 of the kids' room)
-DEMO_BUILDING.floors[1].rooms.find((r) => r.id === "kind").wall_heights = [null, 1.0, null, null];
-DEMO_BUILDING.floors[1].walls = [{ id: "wall_demo", a: [8, 8], b: [8, 6], thickness: null, height: 1.1 }];
-DEMO_BUILDING.floors[0].walls = [{ id: "wall_garage", a: [10, 1.1], b: [12.6, 1.1], thickness: null, height: null }];
-DEMO_BUILDING.floors[0].openings.push(hole("door", "garage", 0, 1.2, 0.9, { wall: "wall_garage" }));
-DEMO_BUILDING.floors[1].furniture = [
-  item("bed", 1.0, 1.4, 1.0, 2.05, 0.8, 90),
-  item("desk", 2.8, 3.8, 1.2, 0.6, 0.75, 180),
-  item("rug", 2.2, 2.6, 1.6, 1.2, 0.01),
-  { ...item("desk", 8.4, 0.36, 1.6, 0.7, 0.75), pictures: [{ entity: "camera.wohnzimmer", state: "*", image: "camera:camera.wohnzimmer" }] },
-  item("chair", 8.4, 1.1, 0.46, 0.5, 0.9, 180),
-  item("shelf", 9.8, 2.1, 1.2, 0.35, 1.9, 90),
-  { ...item("pack:mastershort.living:media_wall", 5.9, 0.3, 3.0, 0.45, 2.2), pictures: [{ entity: "media_player.fernseher", attribute: "app_name", state: "netflix", image: "pic_demo" }] },
-  item("sofa", 5.4, 3.6, 1.9, 0.85, 0.8, 180),
-  item("bed", 5.0, 6.9, 1.4, 2.0, 0.85, 180),
-  item("wardrobe", 3.72, 5.4, 1.4, 0.6, 2.1, 270),
-  item("bathtub", 0.45, 6.1, 1.7, 0.75, 0.58, 90),
-  item("washbasin", 2.1, 4.5, 0.6, 0.46, 0.85),
+  // Phòng ngủ master (0-4.5 x 0-4.5)
+  { id: "m1", type: "bed", x: 1.3, z: 1.45, rotation: 0, w: 1.6, d: 2.05, h: 0.9, variant: null },
+  { id: "m2", type: "nightstand", x: 0.28, z: 1.2, rotation: 0, w: 0.45, d: 0.4, h: 0.5, variant: null },
+  { id: "m3", type: "nightstand", x: 2.45, z: 1.2, rotation: 0, w: 0.45, d: 0.4, h: 0.5, variant: null },
+  { id: "m4", type: "wardrobe", x: 2.4, z: 4.15, rotation: 0, w: 1.8, d: 0.6, h: 2.1, variant: null },
+  { id: "m5", type: "rug", x: 1.5, z: 3.2, rotation: 0, w: 2.0, d: 1.4, h: 0.01, variant: null },
+  { id: "m6", type: "plant", x: 4.0, z: 0.55, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  // WC riêng master (4.5-6 x 0-2.5)
+  { id: "wm1", type: "wc", x: 5.25, z: 0.45, rotation: 0, w: 0.38, d: 0.6, h: 0.8, variant: null },
+  { id: "wm2", type: "washbasin", x: 5.0, z: 2.0, rotation: 0, w: 0.6, d: 0.46, h: 0.85, variant: null },
+  // Phòng ngủ 3 (6-8.5 x 0-4.5)
+  { id: "b31", type: "bed", x: 6.6, z: 2.0, rotation: 0, w: 1.0, d: 2.05, h: 0.9, variant: null },
+  { id: "b32", type: "desk", x: 7.5, z: 0.5, rotation: 0, w: 1.4, d: 0.7, h: 0.75, variant: null },
+  { id: "b33", type: "office_chair", x: 7.5, z: 1.3, rotation: 0, w: 0.65, d: 0.65, h: 1.1, variant: null },
+  { id: "b34", type: "wardrobe", x: 7.6, z: 4.1, rotation: 0, w: 1.8, d: 0.6, h: 2.1, variant: null },
+  { id: "b35", type: "nightstand", x: 6.25, z: 0.55, rotation: 0, w: 0.45, d: 0.4, h: 0.5, variant: null },
+  // Phòng ngủ 2 (8.5-13 x 0-4.5)
+  { id: "b21", type: "bed", x: 10.6, z: 1.45, rotation: 0, w: 1.6, d: 2.05, h: 0.9, variant: null },
+  { id: "b22", type: "nightstand", x: 9.5, z: 1.2, rotation: 0, w: 0.45, d: 0.4, h: 0.5, variant: null },
+  { id: "b23", type: "nightstand", x: 11.7, z: 1.2, rotation: 0, w: 0.45, d: 0.4, h: 0.5, variant: null },
+  { id: "b24", type: "wardrobe", x: 12.65, z: 2.5, rotation: 90, w: 1.8, d: 0.6, h: 2.1, variant: null },
+  { id: "b25", type: "dresser", x: 11.6, z: 4.15, rotation: 0, w: 1.0, d: 0.5, h: 0.9, variant: null },
+  { id: "b26", type: "plant", x: 9.0, z: 0.5, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  // Phòng khách (0-4.5 x 4.5-9)
+  { id: "l1", type: "sofa", x: 0.55, z: 6.5, rotation: 270, w: 2.2, d: 0.9, h: 0.82, variant: null },
+  { id: "l2", type: "armchair", x: 3.2, z: 5.3, rotation: 135, w: 0.85, d: 0.85, h: 0.8, variant: null },
+  { id: "l3", type: "coffee_table", x: 1.7, z: 6.5, rotation: 0, w: 1.1, d: 0.6, h: 0.42, variant: null },
+  { id: "l4", type: "tv_board", x: 4.25, z: 6.5, rotation: 90, w: 1.8, d: 0.42, h: 0.5, variant: null },
+  { id: "l5", type: "sideboard", x: 1.5, z: 4.85, rotation: 0, w: 1.6, d: 0.45, h: 0.8, variant: null },
+  { id: "l6", type: "rug", x: 1.7, z: 6.5, rotation: 0, w: 2.0, d: 1.4, h: 0.01, variant: null },
+  { id: "l7", type: "lamp_floor", x: 4.0, z: 8.6, rotation: 0, w: 0.4, d: 0.4, h: 1.7, variant: null },
+  { id: "l8", type: "plant", x: 4.1, z: 4.9, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  // Phòng ăn (6-9.5 x 4.5-7)
+  { id: "d1", type: "table", x: 7.75, z: 5.75, rotation: 0, w: 1.6, d: 0.9, h: 0.75, variant: null },
+  { id: "d2", type: "chair", x: 7.0, z: 5.2, rotation: 0, w: 0.46, d: 0.5, h: 0.9, variant: null },
+  { id: "d3", type: "chair", x: 8.5, z: 5.2, rotation: 0, w: 0.46, d: 0.5, h: 0.9, variant: null },
+  { id: "d4", type: "chair", x: 7.0, z: 6.3, rotation: 180, w: 0.46, d: 0.5, h: 0.9, variant: null },
+  { id: "d5", type: "chair", x: 8.5, z: 6.3, rotation: 180, w: 0.46, d: 0.5, h: 0.9, variant: null },
+  // Lô gia (10.5-13 x 4.5-7)
+  { id: "lg1", type: "washer", x: 10.85, z: 4.9, rotation: 0, w: 0.6, d: 0.6, h: 0.85, variant: null },
+  { id: "lg2", type: "plant", x: 10.8, z: 6.4, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  { id: "lg3", type: "plant", x: 11.6, z: 6.5, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  { id: "lg4", type: "stool", x: 12.0, z: 5.6, rotation: 0, w: 0.55, d: 0.55, h: 0.42, variant: null },
+  // Phòng làm việc (10.5-13 x 7-11)
+  { id: "w1", type: "desk", x: 12.6, z: 9.0, rotation: 90, w: 1.4, d: 0.7, h: 0.75, variant: null },
+  { id: "w2", type: "office_chair", x: 11.9, z: 9.0, rotation: 90, w: 0.65, d: 0.65, h: 1.1, variant: null },
+  { id: "w3", type: "tall_cabinet", x: 10.9, z: 7.6, rotation: 0, w: 0.6, d: 0.6, h: 2.1, variant: null },
+  { id: "w4", type: "shelf", x: 11.9, z: 7.3, rotation: 0, w: 0.9, d: 0.35, h: 1.9, variant: null },
+  { id: "w5", type: "plant", x: 12.6, z: 10.5, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  // Nhà bếp (0-2.5 x 9-11.5)
+  { id: "k1", type: "kitchen", x: 0.38, z: 10.25, rotation: 270, w: 2.4, d: 0.62, h: 0.92, variant: null },
+  { id: "k2", type: "fridge", x: 2.15, z: 9.45, rotation: 90, w: 0.6, d: 0.65, h: 1.8, variant: null },
+  { id: "k3", type: "sink", x: 1.2, z: 11.15, rotation: 180, w: 0.9, d: 0.62, h: 0.92, variant: null },
+  { id: "k4", type: "stove", x: 2.0, z: 11.15, rotation: 180, w: 0.6, d: 0.62, h: 0.92, variant: null },
+  // WC chính (2.5-4 x 9-11.5)
+  { id: "wc1", type: "wc", x: 3.4, z: 9.45, rotation: 0, w: 0.38, d: 0.6, h: 0.8, variant: null },
+  { id: "wc2", type: "washbasin", x: 2.9, z: 11.2, rotation: 0, w: 0.6, d: 0.46, h: 0.85, variant: null },
+  { id: "wc3", type: "washer", x: 3.6, z: 11.1, rotation: 0, w: 0.6, d: 0.6, h: 0.85, variant: null },
+  // Hành lang (mạch L)
+  { id: "h1", type: "coat_rack", x: 4.7, z: 11.25, rotation: 180, w: 1.0, d: 0.35, h: 1.9, variant: null },
+  { id: "h2", type: "bench", x: 7.5, z: 11.2, rotation: 180, w: 1.4, d: 0.45, h: 0.85, variant: null },
+  { id: "h3", type: "plant", x: 10.0, z: 9.6, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  { id: "h4", type: "tall_cabinet", x: 10.2, z: 10.7, rotation: 0, w: 0.6, d: 0.6, h: 2.1, variant: null },
+  // Robot hút bụi số 1 (dock trong phòng khách)
+  { id: "rv1", type: "robot_vacuum", x: 0.2, z: 8.5, rotation: 270, w: 0.36, d: 0.5, h: 0.1, variant: null, entity: "vacuum.robot_vacuum" },
+  // Robot hút bụi số 2 (dock trong phòng master)
+  { id: "rv2", type: "robot_vacuum", x: 4.1, z: 2.3, rotation: 90, w: 0.36, d: 0.5, h: 0.1, variant: null, entity: "vacuum.robot_vacuum_2" },
+  // Ban công (0-4.5 x -1.5-0)
+  { id: "bc1", type: "plant", x: 0.6, z: -0.8, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  { id: "bc2", type: "armchair", x: 2.0, z: -0.85, rotation: 0, w: 0.85, d: 0.85, h: 0.8, variant: null },
+  { id: "bc3", type: "plant", x: 3.8, z: -0.8, rotation: 0, w: 0.45, d: 0.45, h: 1.1, variant: null },
+  { id: "bc4", type: "table_round", x: 1.0, z: -0.85, rotation: 0, w: 0.7, d: 0.7, h: 0.75, variant: null },
 ];
 
-// Invented garden and roof.
-const area = (id, type, x0, z0, x1, z1) => ({ id, type, points: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]] });
-DEMO_BUILDING.floors[0].outdoor = [
-  area("a1", "lawn", -3, -8, 17, -0.3),
-  area("a2", "lawn", -3, 9.5, 6.5, 14),
-  area("a3", "terrace", 1.5, -2.8, 6.2, -0.3),
-  area("a4", "pool", 8.5, -6.5, 12, -3.5),
-  area("a5", "path", 7.0, 9.5, 8.2, 14),
-  area("a6", "driveway", 13.9, 0.8, 18.5, 4.6),
-  area("a7", "hedge", -3.5, -8.5, -2.9, 14),
-  area("a8", "bed", 1.5, 10.2, 5.5, 11.2),
-  area("a9", "fence", -4, -9, 19, 14.5),
-];
-// solar inverter, home battery and wallbox on the back wall of the garage
-DEMO_BUILDING.floors[0].furniture.push(
-  { ...item("inverter", 13.0, 0.11, 0.5, 0.2, 0.65), power: "sensor.pv_leistung" },
-  { ...item("home_battery", 12.3, 0.14, 0.6, 0.25, 1.1), power: "sensor.akku_leistung" },
-  item("wallbox", 10.6, 0.09, 0.3, 0.15, 0.42),
-);
-DEMO_BUILDING.settings = {
-  ...DEMO_BUILDING.settings,
-  north: 0,
-  // a solar field of 2 × 7 modules on the south side of the roof
-  roof: { type: "gable", pitch: 35, overhang: 0.4, solar: [{ id: "pv_sued", face: "main:b", u: 1.4, v: 0.75, rows: 2, cols: 7, portrait: true }],
-    // a roof window beside it: open, with the blind half down
-    windows: [{ id: "dachfenster", face: "main:b", u: 10.0, v: 1.0, contact: "binary_sensor.schlafzimmer_fenster", cover: "cover.kueche" }],
-  },
-};
-
-// an invented furniture pack (the preview does not check signatures)
+// Pack đồ nội thất demo (tương thích định dạng fp3dpack) – giữ cho demo shop
 export const DEMO_PACK = {
   format: "fp3dpack",
   version: 1,
-  id: "demo.pack",
-  name: "Demo-Pack",
-  publisher: "Demo",
+  id: "demo.apartment.vn",
+  name: "Nội thất chung cư VN (Demo)",
+  publisher: "Demo VN",
   licensee: null,
   items: [
     {
-      id: "cube_seat",
-      name: { de: "Sitzwürfel", en: "Seat cube" },
-      size: [0.45, 0.45, 0.45],
-      parts: [
-        { shape: "box", x: 0, z: 0, w: 1, d: 1, y: 0, h: 0.9, color: "fabric", edges: true },
-        { shape: "box", x: 0, z: 0, w: 0.9, d: 0.9, y: 0.9, h: 0.1, color: "cushion" },
-      ],
+      id: "downlight",
+      name: { vi: "Đèn downlight", en: "Downlight" },
+      size: [0.15, 0.15, 0.05],
+      parts: [{ shape: "box", x: 0, z: 0, w: 0.15, d: 0.15, y: 0, h: 0.05, color: "white", color_mode: "emissive" }],
     },
   ],
 };

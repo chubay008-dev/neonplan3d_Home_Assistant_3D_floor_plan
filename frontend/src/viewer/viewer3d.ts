@@ -60,6 +60,7 @@ import { DEG, GeoBuffer, LineBuffer, pushPrism } from "./geo.ts";
 import { buildLightSurface, lightColors, roomIndexAt, type LightKind, type LightSource, type LightSurface } from "./lighting.ts";
 import { buildOpeningParts, CLOSED, type OpeningState } from "./openings.ts";
 import { circlePath, cleaningPath, stepRobot, type RobotInfo, type RobotMotion } from "./robot.ts";
+import { XRManager, type XRMode } from "./xr.ts";
 
 export type { RobotInfo } from "./robot.ts";
 
@@ -493,6 +494,8 @@ export class FloorplanViewer {
   private roomTint: Map<string, [number, number, number]> | null = null;
   private houseRadius = 20;
   private fpsStart = 0;
+  /** WebXR AR/VR manager (lazy-initialized, separate bundle concern) */
+  private xrManager: XRManager | null = null;
 
   constructor(host: HTMLElement, options: ViewerOptions = {}) {
     this.host = host;
@@ -517,6 +520,22 @@ export class FloorplanViewer {
     this.skyDisc.renderOrder = -1;
     this.scene.add(this.rain, this.snow, this.skyDisc);
     this.controls = this.makeControls();
+    this.xrManager = new XRManager({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      host: this.host,
+      floorHeight: 0,
+      onSessionStart: (_mode) => {
+        // Pause the normal render loop while XR is running
+        cancelAnimationFrame(this.frame);
+        this.frame = 0;
+      },
+      onSessionEnd: () => {
+        // Resume normal render loop
+        this.invalidate();
+      },
+    });
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(host);
     document.addEventListener("visibilitychange", this.onVisibility);
@@ -535,6 +554,31 @@ export class FloorplanViewer {
   /** Whether the tablet level is active (hosts lighten their own work with it). */
   get low(): boolean {
     return this.lowQuality;
+  }
+
+  /** Get the WebXR AR/VR button (lazy-created) */
+  getXRButton(): HTMLButtonElement | null {
+    if (!this.xrManager) return null;
+    return this.xrManager.createButton();
+  }
+
+  /** Get current XR mode */
+  getXRMode(): XRMode {
+    return this.xrManager?.getMode() ?? "none";
+  }
+
+  /** Toggle AR mode */
+  async toggleAR(): Promise<boolean> {
+    if (!this.xrManager) return false;
+    await this.xrManager.toggleAR();
+    return this.xrManager.getMode() === "ar";
+  }
+
+  /** Toggle VR mode */
+  async toggleVR(): Promise<boolean> {
+    if (!this.xrManager) return false;
+    await this.xrManager.toggleVR();
+    return this.xrManager.getMode() === "vr";
   }
 
   /** Vehicles in the parking spots (spot id -> pack item type); a change rebuilds the floors. */
@@ -1059,6 +1103,7 @@ export class FloorplanViewer {
     this.intersection?.disconnect();
     document.removeEventListener("visibilitychange", this.onVisibility);
     this.controls.dispose();
+    this.xrManager?.dispose();
     this.clear();
     this.building = null;
     this.buildRoofMesh();
@@ -2331,6 +2376,15 @@ export class FloorplanViewer {
   private pick(x: number, y: number): { entity: string } | { floorId: string; roomId: string | null } | null {
     const ray = this.rayAt(x, y);
     const floors = this.activeFloors();
+    // robot bodies first: small discs that sit on the floor, in front of walls
+    const robotMeshes = [...this.robots.values()].filter((r) => r.group.parent?.visible !== false).map((r) => r.group.children[0]);
+    for (const hit of ray.intersectObjects(robotMeshes, false)) {
+      const furnId = (hit.object.userData as { furnId?: string }).furnId;
+      if (furnId) {
+        const entity = this.pickFurniture.get(furnId);
+        if (entity) return { entity };
+      }
+    }
     const meshes = floors.flatMap((f) => [f.lampMesh, f.coneMesh, f.framesMesh, f.glassMesh, f.blindsMesh, f.wallMesh, f.floorMesh].filter((m) => m.visible));
     const inRange = (list: { id: string; start: number; end: number }[], tri: number) => list.find((r) => tri >= r.start && tri < r.end)?.id;
     for (const hit of ray.intersectObjects(meshes, false)) {
@@ -2758,7 +2812,9 @@ export class FloorplanViewer {
     }
     const group = new Group();
     const ledMat = new MeshBasicMaterial({ color: ROBOT_LED[info.mode] });
-    group.add(new Mesh(this.robotGeo, this.robotMat!), new Mesh(this.robotLedGeo!, ledMat));
+    const body = new Mesh(this.robotGeo, this.robotMat!);
+    body.userData.furnId = info.id;
+    group.add(body, new Mesh(this.robotLedGeo!, ledMat));
     return { info, motion: { pos: [...info.rest] as [number, number], heading: info.restHeading, path: [], next: 0 }, group, led: ledMat };
   }
 

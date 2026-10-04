@@ -25,6 +25,10 @@ export function stateText(hass: HomeAssistant | undefined, st: HassEntity | unde
     case "cover":
       if (typeof a.current_position === "number" && st.state !== "opening" && st.state !== "closing") return `${a.current_position} %`;
       return translateState(hass, st.state);
+    case "vacuum": {
+      const battery = typeof a.battery_level === "number" ? `${Math.round(a.battery_level)} %` : null;
+      return battery ? `${battery} · ${translateState(hass, st.state)}` : translateState(hass, st.state);
+    }
     case "climate": {
       const cur = typeof a.current_temperature === "number" ? `${formatNumber(hass, a.current_temperature, 1)} ${hass ? tempUnit(hass) : "°C"}` : null;
       if (st.state === "off") return cur ? `${cur} · ${t(hass, "state_off")}` : t(hass, "state_off");

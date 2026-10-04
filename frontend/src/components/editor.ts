@@ -3,6 +3,7 @@
 import { css, html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { fetchImage, listHistory, restoreSnapshot, storeImage, takeSnapshot, type Snapshot } from "../api.ts";
 import { download, exportFile, parseExport } from "../transfer.ts";
+import { buildingToDxf } from "../export/dxf.ts";
 import { areaEntities, autoPlace, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, pictureRuleMatches, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
 import { closeGaps, suggestedThickness } from "../geometry/gaps.ts";
@@ -90,7 +91,7 @@ import { furnitureSize, isElectric, mountBase, packItem, packItemName, packType,
 /** Items that can be fixed against moving. */
 type FixKind = "room" | "opening" | "furniture" | "device" | "wall" | "outdoor";
 
-type Tool = "select" | "rect" | "polygon" | "measure" | "opening" | "furniture" | "outdoor" | "hole" | "wall" | "meter" | "roof" | "energy";
+type Tool = "select" | "rect" | "polygon" | "measure" | "dist" | "opening" | "furniture" | "outdoor" | "hole" | "wall" | "meter" | "roof" | "energy";
 
 type Drag =
   | { kind: "pan"; last: [number, number] }
@@ -110,7 +111,8 @@ type Drag =
   | { kind: "freewall"; start: Vec2; end: Vec2 }
   | { kind: "wallmove"; id: string; end: "a" | "b" | null; start: Vec2; startScreen: [number, number]; base: Building; moved: boolean }
   | { kind: "outdoor"; id: string; start: Vec2; startScreen: [number, number]; base: Building; moved: boolean }
-  | { kind: "tap"; startScreen: [number, number]; last: [number, number]; panning: boolean };
+  | { kind: "tap"; startScreen: [number, number]; last: [number, number]; panning: boolean }
+  | { kind: "dist"; a: Vec2; b: Vec2; done: boolean };
 
 interface Guides {
   point?: Vec2;
@@ -168,6 +170,8 @@ export class Fp3dEditor extends LitElement {
     _fixedHint: { state: true },
     _floorMenu: { state: true },
     _openingPreset: { state: true },
+    _dims: { state: true },
+    _distPts: { state: true },
     _measureLen: { state: true },
     _packages: { state: true },
     _rectSize: { state: true },
@@ -250,6 +254,10 @@ export class Fp3dEditor extends LitElement {
   private declare _floorMenu: boolean;
   /** Kind of opening the opening tool places (the last one chosen). */
   private declare _openingPreset: OpeningPreset;
+  /** Dimension lines (width/depth arrows) of the rooms in the 2D plan. */
+  private declare _dims: boolean;
+  /** Free distance measurement: the clicked points of the current / finished measurement. */
+  private declare _distPts: Vec2[];
   /** Length typed for the next wall when drawing by measure, and the size for "rectangle by size". */
   private declare _measureLen: number;
   /** The package list of the selected room is open. */
@@ -333,6 +341,8 @@ export class Fp3dEditor extends LitElement {
     }
     this._sidePinned = pinned;
     this._preview = null;
+    this._dims = true;
+    this._distPts = [];
     this._measureLen = 3;
     this._packages = false;
     this._rectSize = [4, 3];
@@ -856,6 +866,11 @@ export class Fp3dEditor extends LitElement {
     }
     const world = this.toWorld(...local);
     const target = e.target as Element;
+    if (this._tool === "dist") {
+      const p = this.snap(world, undefined, e.altKey);
+      this.drag = { kind: "dist", a: p, b: p, done: false };
+      return;
+    }
     if (this._tool === "wall") {
       const start = this.snap(world, undefined, e.altKey);
       this.drag = { kind: "freewall", start, end: start };
@@ -1081,6 +1096,9 @@ export class Fp3dEditor extends LitElement {
       return;
     }
     switch (drag.kind) {
+      case "dist":
+        drag.b = this.snap(world, undefined, e.altKey);
+        break;
       case "pan":
         this._view = { ...this._view, ox: this._view.ox + local[0] - drag.last[0], oy: this._view.oy + local[1] - drag.last[1] };
         drag.last = local;
@@ -1396,6 +1414,9 @@ export class Fp3dEditor extends LitElement {
         // by measure, a tap only sets (or moves) the starting point; the walls are typed in
         if (this._tool === "measure") this._draft = [this.snap(this.toWorld(...local), undefined, e.altKey)];
         else this.addDraftPoint(this.snap(this.toWorld(...local), undefined, e.altKey), local);
+        break;
+      case "dist":
+        if (Math.hypot(drag.b[0] - drag.a[0], drag.b[1] - drag.a[1]) > 0.01) this._distPts = [drag.a, drag.b];
         break;
       case "opening":
       case "furniture":
@@ -1755,6 +1776,11 @@ export class Fp3dEditor extends LitElement {
     } else if (e.key === "Enter" && this._tool === "polygon") {
       this.closeDraft();
     } else if (e.key === "Escape") {
+      if (this._distPts.length === 2) {
+        this._distPts = [];
+        if (this._tool === "dist") this._tool = "select";
+        return;
+      }
       if (this._ctx) {
         this._ctx = null;
         return;
@@ -3064,7 +3090,7 @@ export class Fp3dEditor extends LitElement {
         <div class="fp3d-main">
           <div class="fp3d-toolbar">
             <div class="fp3d-seg" role="group" aria-label=${this.t("tool_select")}>
-              ${(["select", "rect", "polygon", "wall", "opening", "furniture", "outdoor", "hole", "roof", "energy"] as Tool[]).map(
+              ${(["select", "rect", "polygon", "wall", "opening", "furniture", "outdoor", "hole", "roof", "energy", "dist"] as Tool[]).map(
                 (tool) => html`<button
                   aria-pressed=${this._tool === tool}
                   ?disabled=${!floor || (!this.isAdmin && tool !== "select")}
@@ -3081,6 +3107,8 @@ export class Fp3dEditor extends LitElement {
               )}
             </div>
             <div class="fp3d-seg">
+              <button ?disabled=${!floor} aria-pressed=${this._dims} title=${this.t("dims_hint")} @click=${() => (this._dims = !this._dims)}>📏 ${this.t("dims")}</button>
+              <button ?disabled=${!floor} title=${this.t("dxf_hint")} @click=${() => this.exportDxf()}>DXF</button>
               <button ?disabled=${!this._canUndo} @click=${() => this.undo()} title="Ctrl+Z">${this.t("undo")}</button>
               <button ?disabled=${!this._canRedo} @click=${() => this.redo()} title="Ctrl+Y">${this.t("redo")}</button>
               <button @click=${() => this.fit()}>${this.t("fit")}</button>
@@ -3104,7 +3132,7 @@ export class Fp3dEditor extends LitElement {
               @contextmenu=${this.onContextMenu}
             >
               ${this.renderBackground(floor)} ${this.renderGrid()} ${this.renderGhost()} ${walls ? this.renderWalls(walls.walls) : nothing}
-              ${floor ? this.renderOutdoor(floor) : nothing} ${floor ? this.renderRooms(floor) : nothing} ${floor ? this.renderFurniture(floor) : nothing}
+              ${floor ? this.renderOutdoor(floor) : nothing} ${floor ? this.renderRooms(floor) : nothing} ${this._dims && floor ? this.renderDimensions(floor) : nothing} ${floor ? this.renderFurniture(floor) : nothing}
               ${floor ? this.renderFreeWalls(floor) : nothing}
               ${floor && walls ? this.renderOpenings(floor, walls.walls) : nothing} ${floor ? this.renderMeter(floor) : nothing}
               ${floor && this._tool === "select" ? this.renderDevices(floor) : nothing}
@@ -3286,6 +3314,69 @@ export class Fp3dEditor extends LitElement {
           </div>`
         : nothing}
     </section>`;
+  }
+
+
+  /**
+   * Dimension lines of every rectangular room in the 2D plan: a width chain above the top edge and a
+   * depth chain left of the left edge – dimension line with double arrows, extension ticks from the
+   * corners and the metre value; short rooms skip the label.
+   */
+  private renderDimensions(floor: Floor) {
+    const { scale } = this._view;
+    const off = 14; // distance of the dimension lines from the room edge (px)
+    const ext = 8; // how far the extension ticks start from the corner (px)
+    // one chain: the dimension line, its arrowheads and the extension ticks
+    const chain = (
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      ex1: number,
+      ey1: number,
+      ex2: number,
+      ey2: number,
+      label: string | null,
+      vertical: boolean
+    ) => svg`<g class="fp3d-dims-line">
+      ${ext > 0
+        ? svg`<line class="fp3d-dims-ext" x1=${ex1} y1=${ey1} x2=${x1} y2=${y1} />
+               <line class="fp3d-dims-ext" x1=${ex2} y1=${ey2} x2=${x2} y2=${y2} />`
+        : nothing}
+      <line x1=${x1} y1=${y1} x2=${x2} y2=${y2} marker-start="url(#fp3d-dim-arrow)" marker-end="url(#fp3d-dim-arrow)" />
+      ${label
+        ? svg`<text class="fp3d-dim fp3d-dims-label" x=${(x1 + x2) / 2} y=${vertical ? (y1 + y2) / 2 : y1 - 5} transform=${vertical ? svg`rotate(-90 ${(x1 + x2) / 2} ${(y1 + y2) / 2})` : ""}>${label}</text>`
+        : nothing}
+    </g>`;
+    return svg`
+      <defs>
+        <marker id="fp3d-dim-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8" fill="none" stroke="var(--fp3d-accent)" stroke-width="1.4" /></marker>
+      </defs>
+      <g pointer-events="none">${floor.rooms.map((r) => {
+        // axis-aligned rectangles only: the chains follow the room's top and left edge;
+        // free shapes keep their area label instead of a misleading bounding box
+        if (r.points.length !== 4) return nothing;
+        const xs = r.points.map((p) => p[0]);
+        const zs = r.points.map((p) => p[1]);
+        if (new Set(xs.map((v) => Math.round(v * 1000))).size > 2 || new Set(zs.map((v) => Math.round(v * 1000))).size > 2) return nothing;
+        const b = { x0: Math.min(...xs), z0: Math.min(...zs), x1: Math.max(...xs), z1: Math.max(...zs) };
+        const wM = b.x1 - b.x0;
+        const dM = b.z1 - b.z0;
+        if (wM < 0.05 || dM < 0.05) return nothing;
+        const wPx = wM * scale;
+        const dPx = dM * scale;
+        // width chain: above the top edge, ticks up from both top corners
+        const [wx1, wy] = this.toScreen([b.x0, b.z0]);
+        const [wx2] = this.toScreen([b.x1, b.z0]);
+        // depth chain: left of the left edge, ticks out from both left corners
+        const width = chain(wx1, wy - off, wx2, wy - off, wx1, wy - ext, wx2, wy - ext, wPx > 34 ? `${wM.toFixed(1)} m` : null, false);
+        const depth =
+          dPx > 34
+            ? chain(wx1 - off, wy, wx1 - off, wy + dPx, wx1 - ext, wy, wx1 - ext, wy + dPx, `${dM.toFixed(1)} m`, true)
+            : nothing;
+        return svg`${width} ${depth}`;
+      })}</g>
+    `;
   }
 
   private renderRooms(floor: Floor) {
@@ -3569,6 +3660,35 @@ export class Fp3dEditor extends LitElement {
       return svg`<g pointer-events="none">
         <rect class="fp3d-draft" x=${Math.min(x0, x1)} y=${Math.min(y0, y1)} width=${Math.abs(x1 - x0)} height=${Math.abs(y1 - y0)} />
         <text class="fp3d-dim" x=${(x0 + x1) / 2} y=${Math.min(y0, y1) - 8}>${formatNumber(this.hass, w, 2)} × ${formatNumber(this.hass, d, 2)} m</text>
+      </g>`;
+    }
+    // free distance measurement: the active drag plus finished points
+    const distDrag = this.drag?.kind === "dist" ? this.drag : null;
+    if (distDrag) {
+      const [x1, y1] = this.toScreen(distDrag.a);
+      const [x2, y2] = this.toScreen(distDrag.b);
+      const dx = distDrag.b[0] - distDrag.a[0];
+      const dz = distDrag.b[1] - distDrag.a[1];
+      const l = Math.hypot(dx, dz);
+      const nx = l > 1e-6 ? -dz / l : 0;
+      const nz = l > 1e-6 ? dx / l : 0;
+      const [mx, my] = this.toScreen([(distDrag.a[0] + distDrag.b[0]) / 2 + nx * 0.25, (distDrag.a[1] + distDrag.b[1]) / 2 + nz * 0.25]);
+      return svg`<g class="fp3d-dist" pointer-events="none">
+        <line x1=${x1} y1=${y1} x2=${x2} y2=${y2} />
+        <circle cx=${x1} cy=${y1} r="3" />
+        <text class="fp3d-dim fp3d-dims-label" x=${mx} y=${my - 6}>${l.toFixed(2)} m</text>
+      </g>`;
+    }
+    if (this._distPts.length === 2) {
+      const [a, b] = this._distPts;
+      const [x1, y1] = this.toScreen(a);
+      const [x2, y2] = this.toScreen(b);
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      return svg`<g class="fp3d-dist" pointer-events="none">
+        <line x1=${x1} y1=${y1} x2=${x2} y2=${y2} />
+        <circle cx=${x1} cy=${y1} r="3" />
+        <circle cx=${x2} cy=${y2} r="3" />
+        <text class="fp3d-dim fp3d-dims-label" x=${(x1 + x2) / 2} y=${(y1 + y2) / 2 - 8}>${l.toFixed(2)} m</text>
       </g>`;
     }
     if (this._tool !== "polygon" && this._tool !== "measure") return nothing;
@@ -5066,6 +5186,13 @@ export class Fp3dEditor extends LitElement {
     download(`neonplan3d-${this.t(shareable ? "export_name_template" : "export_name_backup")}-${day}.json`, JSON.stringify(exportFile(this._doc, shareable), null, 2));
   }
 
+  /** The plan as DXF R2010 (1 unit = 1 m) for CAD: walls, rooms, openings, labels and overall dims. */
+  private exportDxf(): void {
+    if (!this._doc.floors.length) return;
+    const day = new Date().toISOString().slice(0, 10);
+    download(`neonplan3d-${day}.dxf`, buildingToDxf(this._doc));
+  }
+
   private async importPlan(e: Event): Promise<void> {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -5526,6 +5653,29 @@ export class Fp3dEditor extends LitElement {
         paint-order: stroke;
         stroke: var(--fp3d-bg);
         stroke-width: 3px;
+      }
+      .fp3d-dims-line line {
+        stroke: var(--fp3d-accent);
+        stroke-width: 1.4;
+        opacity: 0.9;
+      }
+      .fp3d-dims-label {
+        font-size: 10.5px;
+      }
+      .fp3d-dims-ext {
+        stroke: var(--fp3d-accent);
+        stroke-width: 1;
+        opacity: 0.55;
+      }
+      .fp3d-dist line {
+        stroke: var(--fp3d-accent);
+        stroke-width: 1.6;
+        stroke-dasharray: 5 4;
+      }
+      .fp3d-dist circle {
+        fill: var(--fp3d-accent);
+        stroke: var(--fp3d-bg);
+        stroke-width: 1.5;
       }
       .fp3d-vertex circle:not(.fp3d-hit) {
         fill: var(--fp3d-bg);

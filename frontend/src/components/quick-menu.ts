@@ -203,6 +203,26 @@ export class Fp3dQuickMenu extends LitElement {
     </div>`;
   }
 
+  /** Robot vacuum: start/stop cleaning in the middle, stop and return to the dock on the ring. */
+  private renderVacuum(st: HassEntity) {
+    const active = st.state === "cleaning" || st.state === "returning";
+    const battery = typeof st.attributes.battery_level === "number" ? `${st.attributes.battery_level} %` : null;
+    return html`<div class="qm-ring qm-ring-small">
+        ${this.ring([
+          html`<button class="qm-swatch qm-slot" aria-label=${this.t("robot_return")} @click=${() => this.call("vacuum", "return_to_base")}>⌂</button>`,
+          html`<button class="qm-swatch qm-slot ${st.state === "idle" ? "qm-slot-on" : ""}" aria-label=${this.t("robot_stop")} @click=${() => this.call("vacuum", "stop")}>■</button>`,
+        ])}
+        <button
+          class="qm-power ${active ? "qm-on" : ""}"
+          aria-pressed=${active}
+          @click=${() => this.ask() && this.call("vacuum", "toggle")}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0" /></svg>
+          <b>${battery ? `${battery} · ` : ""}${stateText(this.hass, st)}</b>
+        </button>
+      </div>`;
+  }
+
   protected render() {
     const st = this.hass?.states[this.entity];
     if (!st) return nothing;
@@ -215,7 +235,9 @@ export class Fp3dQuickMenu extends LitElement {
           ? this.renderCover(st)
           : kind === "camera"
             ? this.renderCamera(st)
-            : this.renderToggle(st);
+            : kind === "vacuum"
+              ? this.renderVacuum(st)
+              : this.renderToggle(st);
     return html`<div class="qm" role="dialog" aria-label=${entityName(this.hass, this.entity)}>
       <div class="qm-title">${entityName(this.hass, this.entity)}</div>
       ${body}
